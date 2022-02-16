@@ -20,11 +20,22 @@
 #include <unistd.h>
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 /* Synchronize at least the data part of a file with the underlying
    media.  */
 int
 fdatasync (int fd)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->fdatasync != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->fdatasync(fd);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (fdatasync, fd);
 }
 libc_hidden_def (fdatasync)

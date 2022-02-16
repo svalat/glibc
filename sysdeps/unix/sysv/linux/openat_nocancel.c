@@ -22,6 +22,8 @@
 #include <sysdep-cancel.h>
 #include <not-cancel.h>
 
+#include <ioinstr.h>
+
 #ifndef __OFF_T_MATCHES_OFF64_T
 
 int
@@ -36,6 +38,15 @@ __openat_nocancel (int fd, const char *file, int oflag, ...)
       va_end (arg);
     }
 
+  /* Instrumentation */
+  /*if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->openat != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->openat(fd, file, oflag, mode);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }*/
+
+  /* Standard implementation */
   return INLINE_SYSCALL_CALL (openat, fd, file, oflag, mode);
 }
 hidden_def (__openat_nocancel)

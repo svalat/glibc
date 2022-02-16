@@ -18,11 +18,22 @@
 #include <sys/uio.h>
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 #ifdef __ASSUME_PWRITEV
 
 ssize_t
 pwritev64 (int fd, const struct iovec *vector, int count, off64_t offset)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->pwritev64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->pwritev64(fd, vector, count, offset);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (pwritev, fd, vector, count, LO_HI_LONG (offset));
 }
 #else

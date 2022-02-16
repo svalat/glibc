@@ -20,9 +20,20 @@
 #include <sysdep-cancel.h>
 #include <not-cancel.h>
 
+#include <ioinstr.h>
+
 ssize_t
 __pread64_nocancel (int fd, void *buf, size_t count, off64_t offset)
 {
+  /* Instrumentation */
+  /*if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->pread64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->pread64(fd, buf, count, offset);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }*/
+
+  /* Standard implementation */
   return INLINE_SYSCALL_CALL (pread64, fd, buf, count, SYSCALL_LL64_PRW (offset));
 }
 hidden_def (__pread64_nocancel)

@@ -21,12 +21,23 @@
 
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 #ifndef __OFF_T_MATCHES_OFF64_T
 
 /* Create FILE with protections MODE.  */
 int
 __creat (const char *file, mode_t mode)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->creat != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->create(file, mode);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 # ifdef __NR_creat
   return SYSCALL_CANCEL (creat, file, mode);
 # else

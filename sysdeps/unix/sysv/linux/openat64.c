@@ -21,6 +21,8 @@
 
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 #ifdef __OFF_T_MATCHES_OFF64_T
 # define EXTRA_OPEN_FLAGS 0
 #else
@@ -42,6 +44,15 @@ __libc_openat64 (int fd, const char *file, int oflag, ...)
       va_end (arg);
     }
 
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->openat64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->openat64(fd, file, oflag, mode);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (openat, fd, file, oflag | EXTRA_OPEN_FLAGS, mode);
 }
 

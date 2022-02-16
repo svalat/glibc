@@ -22,6 +22,8 @@
 #include <sysdep.h>
 #include <errno.h>
 
+#include <ioinstr.h>
+
 #ifndef __OFF_T_MATCHES_OFF64_T
 
 /* Test for overflows of structures where we ask the kernel to fill them
@@ -41,6 +43,15 @@ static inline off_t lseek_overflow (loff_t res)
 off_t
 __lseek (int fd, off_t offset, int whence)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->lseek != NULL) {
+    __glib_ioinstr_entered = true;
+    off_t ret = __glibc_ioinstr_hooks->lseek(fd, offset, whence);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 # ifdef __NR__llseek
   loff_t res;
   int rc = INLINE_SYSCALL_CALL (_llseek, fd,

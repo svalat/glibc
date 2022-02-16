@@ -21,12 +21,23 @@
 #include <sysdep.h>
 #include <kernel_stat.h>
 
+#include <ioinstr.h>
+
 #if !STATFS_IS_STATFS64
 
 /* Return information about the filesystem on which FILE resides.  */
 int
 __statfs (const char *file, struct statfs *buf)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->statfs != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->statfs(file, buf);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   struct statfs64 buf64;
   int rc = INLINE_SYSCALL_CALL (statfs64, file, sizeof (buf64), &buf64);
   if (rc == 0)

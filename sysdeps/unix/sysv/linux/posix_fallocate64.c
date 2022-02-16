@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #include <sysdep.h>
 
+#include <ioinstr.h>
+
 extern int __posix_fallocate64_l64 (int fd, __off64_t offset, __off64_t len);
 libc_hidden_proto (__posix_fallocate64_l64)
 #define __posix_fallocate64_l64 static internal_fallocate64
@@ -28,6 +30,15 @@ libc_hidden_proto (__posix_fallocate64_l64)
 int
 __posix_fallocate64_l64 (int fd, __off64_t offset, __off64_t len)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->posix_fallocate64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->posix_fallocate64(fd, offset, len);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   int res = INTERNAL_SYSCALL_CALL (fallocate, fd, 0,
 				   SYSCALL_LL64 (offset), SYSCALL_LL64 (len));
   if (! INTERNAL_SYSCALL_ERROR_P (res))

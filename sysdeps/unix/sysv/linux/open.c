@@ -24,6 +24,8 @@
 
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 #ifndef __OFF_T_MATCHES_OFF64_T
 
 /* Open FILE with access OFLAG.  If O_CREAT or O_TMPFILE is in OFLAG,
@@ -41,6 +43,15 @@ __libc_open (const char *file, int oflag, ...)
       va_end (arg);
     }
 
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->open != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->open(file, oflag, mode);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (openat, AT_FDCWD, file, oflag, mode);
 }
 libc_hidden_def (__libc_open)

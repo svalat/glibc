@@ -20,9 +20,20 @@
 #include <sysdep-cancel.h>
 #include <not-cancel.h>
 
+#include <ioinstr.h>
+
 int
 __close_nocancel (int fd)
 {
+  /* Instrumentation */
+  /*if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->close != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->close(fd);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }*/
+
+  /* Standard implementation */
   return INLINE_SYSCALL_CALL (close, fd);
 }
 libc_hidden_def (__close_nocancel)

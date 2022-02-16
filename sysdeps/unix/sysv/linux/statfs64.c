@@ -24,10 +24,21 @@
 #undef __statfs
 #undef statfs
 
+#include <ioinstr.h>
+
 /* Return information about the filesystem on which FILE resides.  */
 int
 __statfs64 (const char *file, struct statfs64 *buf)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->statfs64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->statfs64(file, buf);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 #ifdef __NR_statfs64
   return INLINE_SYSCALL_CALL (statfs64, file, sizeof (*buf), buf);
 #else

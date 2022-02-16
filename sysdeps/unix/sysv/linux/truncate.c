@@ -19,11 +19,22 @@
 #include <sysdep.h>
 #include <errno.h>
 
+#include <ioinstr.h>
+
 #ifndef __OFF_T_MATCHES_OFF64_T
 /* Truncate PATH to LENGTH bytes.  */
 int
 __truncate (const char *path, off_t length)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->truncate != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->truncate(path, length);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 # ifndef __NR_truncate
   return INLINE_SYSCALL_CALL (truncate64, path,
 			      __ALIGNMENT_ARG SYSCALL_LL (length));

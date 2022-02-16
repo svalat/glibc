@@ -20,6 +20,8 @@
 #include <sysdep.h>
 #include <shlib-compat.h>
 
+#include <ioinstr.h>
+
 int __posix_fadvise64_l64 (int fd, off64_t offset, off64_t len, int advise);
 libc_hidden_proto (__posix_fadvise64_l64)
 
@@ -41,6 +43,15 @@ libc_hidden_proto (__posix_fadvise64_l64)
 int
 __posix_fadvise64_l64 (int fd, off64_t offset, off64_t len, int advise)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->posix_fadvise64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->posix_fadvise64(fd, offset, len, advise);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 #ifdef __ASSUME_FADVISE64_64_6ARG
   int ret = INTERNAL_SYSCALL_CALL (fadvise64_64, fd, advise,
 				   SYSCALL_LL64 (offset), SYSCALL_LL64 (len));

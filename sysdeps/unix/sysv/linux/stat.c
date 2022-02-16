@@ -20,10 +20,21 @@
 #include <fcntl.h>
 #include <kernel_stat.h>
 
+#include <ioinstr.h>
+
 #if !XSTAT_IS_XSTAT64
 int
 __stat (const char *file, struct stat *buf)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->stat != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->stat(file, buf);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return __fstatat (AT_FDCWD, file, buf, 0);
 }
 

@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <sysdep.h>
 
+#include <ioinstr.h>
+
 #ifndef __NR_ftruncate64
 # define __NR_ftruncate64 __NR_ftruncate
 #endif
@@ -26,6 +28,15 @@
 int
 __ftruncate64 (int fd, off64_t length)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->ftruncate64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->ftruncate64(fd, length);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return INLINE_SYSCALL_CALL (ftruncate64, fd,
 			      __ALIGNMENT_ARG SYSCALL_LL64 (length));
 }

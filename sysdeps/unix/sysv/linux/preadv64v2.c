@@ -19,10 +19,21 @@
 #include <sys/uio.h>
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 ssize_t
 preadv64v2 (int fd, const struct iovec *vector, int count, off64_t offset,
 	    int flags)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->preadv64v2 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->preadv64v2(fd, vector, count, offset, flags);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   ssize_t result = SYSCALL_CANCEL (preadv2, fd, vector, count,
 				   LO_HI_LONG (offset), flags);
   if (result >= 0 || errno != ENOSYS)

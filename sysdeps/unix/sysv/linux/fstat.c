@@ -21,10 +21,21 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include <ioinstr.h>
+
 #if !XSTAT_IS_XSTAT64
 int
 __fstat (int fd, struct stat *buf)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->fstat != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->fstat(fd, buf);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   if (fd < 0)
     {
       __set_errno (EBADF);

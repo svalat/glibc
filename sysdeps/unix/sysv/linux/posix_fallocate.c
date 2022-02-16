@@ -22,10 +22,21 @@
 #include <sysdeps/posix/posix_fallocate.c>
 #undef posix_fallocate
 
+#include <ioinstr.h>
+
 /* Reserve storage for the data of the file associated with FD.  */
 int
 posix_fallocate (int fd, __off_t offset, __off_t len)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->posix_fallocate != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->posix_fallocate(fd, offset, len);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   int res = INTERNAL_SYSCALL_CALL (fallocate, fd, 0,
 				   SYSCALL_LL (offset), SYSCALL_LL (len));
   if (! INTERNAL_SYSCALL_ERROR_P (res))

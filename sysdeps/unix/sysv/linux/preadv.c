@@ -18,6 +18,8 @@
 #include <sys/uio.h>
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 #ifndef __OFF_T_MATCHES_OFF64_T
 
 # ifdef __ASSUME_PREADV
@@ -25,6 +27,15 @@
 ssize_t
 preadv (int fd, const struct iovec *vector, int count, off_t offset)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->preadv != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->preadv(fd, vector, count, offset);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (preadv, fd, vector, count, LO_HI_LONG (offset));
 }
 # else

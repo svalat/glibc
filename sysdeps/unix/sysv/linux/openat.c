@@ -21,6 +21,8 @@
 
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 #ifndef __OFF_T_MATCHES_OFF64_T
 
 /* Open FILE with access OFLAG.  Interpret relative paths relative to
@@ -38,6 +40,15 @@ __libc_openat (int fd, const char *file, int oflag, ...)
       va_end (arg);
     }
 
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->openat != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->openat(fd, file, oflag, mode);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (openat, fd, file, oflag, mode);
 }
 weak_alias (__libc_openat, __openat)

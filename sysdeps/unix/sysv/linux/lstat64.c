@@ -23,6 +23,8 @@
 #include <kernel_stat.h>
 #include <stat_t64_cp.h>
 
+#include <ioinstr.h>
+
 int
 __lstat64_time64 (const char *file, struct __stat64_t64 *buf)
 {
@@ -34,6 +36,15 @@ hidden_def (__lstat64_time64)
 int
 __lstat64 (const char *file, struct stat64 *buf)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->lstat64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->lstat64(file, buf);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   struct __stat64_t64 st_t64;
   return __lstat64_time64 (file, &st_t64)
 	 ?: __cp_stat64_t64_stat64 (&st_t64, buf);

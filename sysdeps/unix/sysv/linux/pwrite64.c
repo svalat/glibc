@@ -20,9 +20,20 @@
 #include <sysdep-cancel.h>
 #include <shlib-compat.h>
 
+#include <ioinstr.h>
+
 ssize_t
 __libc_pwrite64 (int fd, const void *buf, size_t count, off64_t offset)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->pwrite64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->pwrite64(fd, buf, count, offset);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (pwrite64, fd, buf, count, SYSCALL_LL64_PRW (offset));
 }
 

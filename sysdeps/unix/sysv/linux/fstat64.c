@@ -24,6 +24,8 @@
 #include <stat_t64_cp.h>
 #include <errno.h>
 
+#include <ioinstr.h>
+
 int
 __fstat64_time64 (int fd, struct __stat64_t64 *buf)
 {
@@ -40,6 +42,15 @@ hidden_def (__fstat64_time64)
 int
 __fstat64 (int fd, struct stat64 *buf)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->fstat64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->fstat64(fd, buf);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   if (fd < 0)
     {
       __set_errno (EBADF);

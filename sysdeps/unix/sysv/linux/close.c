@@ -20,10 +20,21 @@
 #include <sysdep-cancel.h>
 #include <not-cancel.h>
 
+#include <ioinstr.h>
+
 /* Close the file descriptor FD.  */
 int
 __close (int fd)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->close != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->close(fd);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (close, fd);
 }
 libc_hidden_def (__close)

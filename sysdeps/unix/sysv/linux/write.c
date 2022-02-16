@@ -19,10 +19,21 @@
 #include <unistd.h>
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 /* Write NBYTES of BUF to FD.  Return the number written, or -1.  */
 ssize_t
 __libc_write (int fd, const void *buf, size_t nbytes)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->write != NULL) {
+    __glib_ioinstr_entered = true;
+    ssize_t ret = __glibc_ioinstr_hooks->write(fd, buf, nbytes);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (write, fd, buf, nbytes);
 }
 libc_hidden_def (__libc_write)

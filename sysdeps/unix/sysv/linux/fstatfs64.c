@@ -24,10 +24,21 @@
 #undef __fstatfs
 #undef fstatfs
 
+#include <ioinstr.h>
+
 /* Return information about the filesystem on which FD resides.  */
 int
 __fstatfs64 (int fd, struct statfs64 *buf)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->fstatfs64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->fstatfs64(fd, buf);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 #ifdef __NR_fstatfs64
   return INLINE_SYSCALL_CALL (fstatfs64, fd, sizeof (*buf), buf);
 #else

@@ -21,10 +21,21 @@
 #include <sysdep.h>
 #include <errno.h>
 
+#include <ioinstr.h>
+
 /* Rename the file OLD to NEW.  */
 int
 rename (const char *old, const char *new)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->rename != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->rename(old, new);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 #if defined (__NR_rename)
   return INLINE_SYSCALL_CALL (rename, old, new);
 #elif defined (__NR_renameat)

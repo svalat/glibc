@@ -20,10 +20,21 @@
 #include <unistd.h>
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 /* Make all changes done to FD actually appear on disk.  */
 int
 fsync (int fd)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->fsync != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->fsync(fd);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (fsync, fd);
 }
 libc_hidden_def (fsync)

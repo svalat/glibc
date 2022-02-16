@@ -20,12 +20,23 @@
 #include <kernel_stat.h>
 #include <sysdep.h>
 
+#include <ioinstr.h>
+
 #if !XSTAT_IS_XSTAT64
 # include <kstat_cp.h>
 
 int
 __fstatat (int fd, const char *file, struct stat *buf, int flag)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->fstatat != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->fstatat(fd, file, buf, flag);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   struct __stat64_t64 st64;
   int r = __fstatat64_time64 (fd, file, &st64, flag);
   if (r == 0)

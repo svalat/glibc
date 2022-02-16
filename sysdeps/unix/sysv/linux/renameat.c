@@ -21,9 +21,20 @@
 #include <sysdep.h>
 #include <errno.h>
 
+#include <ioinstr.h>
+
 int
 __renameat (int oldfd, const char *old, int newfd, const char *new)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->renameat != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->renameat(oldfd, old, newfd, new);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 #ifdef __NR_renameat
   return INLINE_SYSCALL_CALL (renameat, oldfd, old, newfd, new);
 #else

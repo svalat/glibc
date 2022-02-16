@@ -18,11 +18,22 @@
 #include <sys/uio.h>
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 #ifdef __ASSUME_PREADV
 
 ssize_t
 preadv64 (int fd, const struct iovec *vector, int count, off64_t offset)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->preadv64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->preadv64(fd, vector, count, offset);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (preadv, fd, vector, count, LO_HI_LONG (offset));
 }
 #else

@@ -19,10 +19,21 @@
 #include <unistd.h>
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 /* Read NBYTES into BUF from FD.  Return the number read or -1.  */
 ssize_t
 __libc_read (int fd, void *buf, size_t nbytes)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->read != NULL) {
+    __glib_ioinstr_entered = true;
+    ssize_t ret = __glibc_ioinstr_hooks->read(fd, buf, nbytes);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (read, fd, buf, nbytes);
 }
 libc_hidden_def (__libc_read)

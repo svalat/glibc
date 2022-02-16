@@ -20,10 +20,21 @@
 #include <sys/types.h>
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 /* Create FILE with protections MODE.  */
 int
 __creat64 (const char *file, mode_t mode)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->creat64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->creat64(file, mode);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 #if defined __OFF_T_MATCHES_OFF64_T && defined __NR_creat
   return SYSCALL_CANCEL (creat, file, mode);
 #else

@@ -19,6 +19,8 @@
 #include <fcntl.h>
 #include <sysdep.h>
 
+#include <ioinstr.h>
+
 /* Advice the system about the expected behaviour of the application with
    respect to the file associated with FD.  */
 
@@ -41,6 +43,15 @@
 int
 posix_fadvise (int fd, off_t offset, off_t len, int advise)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->posix_fadvise != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->posix_fadvise(fd, offset, len, madvise);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 # if defined (__NR_fadvise64) && !defined (__ASSUME_FADVISE64_AS_64_64)
   int ret = INTERNAL_SYSCALL_CALL (fadvise64, fd,
 				   __ALIGNMENT_ARG SYSCALL_LL (offset),

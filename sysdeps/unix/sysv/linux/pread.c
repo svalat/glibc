@@ -20,11 +20,22 @@
 #include <sysdep-cancel.h>
 #include <shlib-compat.h>
 
+#include <ioinstr.h>
+
 #ifndef __OFF_T_MATCHES_OFF64_T
 
 ssize_t
 __libc_pread (int fd, void *buf, size_t count, off_t offset)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->pread != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->pread(fd, buf, count, offset);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (pread64, fd, buf, count, SYSCALL_LL_PRW (offset));
 }
 

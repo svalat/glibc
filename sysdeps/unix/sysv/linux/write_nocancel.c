@@ -20,9 +20,20 @@
 #include <sysdep-cancel.h>
 #include <not-cancel.h>
 
+#include <ioinstr.h>
+
 ssize_t
 __write_nocancel (int fd, const void *buf, size_t nbytes)
 {
+  /* Instrumentation */
+  /*if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->write != NULL) {
+    __glib_ioinstr_entered = true;
+    ssize_t ret = __glibc_ioinstr_hooks->write(fd, buf, nbytes);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }*/
+
+  /* Standard implementation */
   return INLINE_SYSCALL_CALL (write, fd, buf, nbytes);
 }
 hidden_def (__write_nocancel)

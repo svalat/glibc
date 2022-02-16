@@ -28,6 +28,8 @@
 #include <stat_t64_cp.h>
 #include <sys/sysmacros.h>
 
+#include <ioinstr.h>
+
 #if __TIMESIZE == 64 \
      && (__WORDSIZE == 32 \
      && (!defined __SYSCALL_WORDSIZE || __SYSCALL_WORDSIZE == 32))
@@ -169,6 +171,15 @@ hidden_def (__fstatat64_time64)
 int
 __fstatat64 (int fd, const char *file, struct stat64 *buf, int flags)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->fstatat64 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->fstatat64(fd, file, buf, flags);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   struct __stat64_t64 st_t64;
   return __fstatat64_time64 (fd, file, &st_t64, flags)
 	 ?: __cp_stat64_t64_stat64 (&st_t64, buf);

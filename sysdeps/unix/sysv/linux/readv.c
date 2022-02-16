@@ -20,9 +20,20 @@
 #include <sys/uio.h>
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 ssize_t
 __readv (int fd, const struct iovec *iov, int iovcnt)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->readv != NULL) {
+    __glib_ioinstr_entered = true;
+    ssize_t ret = __glibc_ioinstr_hooks->readv(fd, iov, iovcnt);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return SYSCALL_CANCEL (readv, fd, iov, iovcnt);
 }
 libc_hidden_def (__readv)

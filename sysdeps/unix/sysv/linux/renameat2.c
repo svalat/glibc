@@ -20,10 +20,21 @@
 #include <stdio.h>
 #include <sysdep.h>
 
+#include <ioinstr.h>
+
 int
 __renameat2 (int oldfd, const char *old, int newfd, const char *new,
            unsigned int flags)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->renameat2 != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->renameat2(oldfd, old, newfd, new, flags);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 #if !defined (__NR_renameat) || defined (__ASSUME_RENAMEAT2)
   return INLINE_SYSCALL_CALL (renameat2, oldfd, old, newfd, new, flags);
 #else

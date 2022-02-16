@@ -20,9 +20,20 @@
 #include <sys/types.h>
 #include <sysdep.h>
 
+#include <ioinstr.h>
+
 ssize_t
 __readahead (int fd, off64_t offset, size_t count)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->readahead != NULL) {
+    __glib_ioinstr_entered = true;
+    ssize_t ret = __glibc_ioinstr_hooks->readahead(fd, offset, count);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
   return INLINE_SYSCALL_CALL (readahead, fd,
 			      __ALIGNMENT_ARG SYSCALL_LL64 (offset),
 			      count);

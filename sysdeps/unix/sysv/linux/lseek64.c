@@ -23,9 +23,20 @@
 #include <errno.h>
 #include <shlib-compat.h>
 
+#include <ioinstr.h>
+
 off64_t
 __lseek64 (int fd, off64_t offset, int whence)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->lseek64 != NULL) {
+    __glib_ioinstr_entered = true;
+    off64_t ret = __glibc_ioinstr_hooks->lseek64(fd, offset, whence);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 #ifdef __NR__llseek
   loff_t res;
   int rc = INLINE_SYSCALL_CALL (_llseek, fd,

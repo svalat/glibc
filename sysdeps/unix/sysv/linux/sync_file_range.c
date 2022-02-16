@@ -19,9 +19,20 @@
 #include <fcntl.h>
 #include <sysdep-cancel.h>
 
+#include <ioinstr.h>
+
 int
 sync_file_range (int fd, __off64_t offset, __off64_t len, unsigned int flags)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->sync_file_range != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->sync_file_range(fd, offset, len, flags);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 #if defined (__NR_sync_file_range2)
   return SYSCALL_CANCEL (sync_file_range2, fd, flags, SYSCALL_LL64 (offset),
 			 SYSCALL_LL64 (len));

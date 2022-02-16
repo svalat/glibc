@@ -19,11 +19,22 @@
 #include <sysdep.h>
 #include <errno.h>
 
+#include <ioinstr.h>
+
 #ifndef __OFF_T_MATCHES_OFF64_T
 /* Truncate the file FD refers to LENGTH bytes.  */
 int
 __ftruncate (int fd, off_t length)
 {
+  /* Instrumentation */
+  if (__glibc_ioinstr_hooks != NULL && __glib_ioinstr_entered == false && __glibc_ioinstr_hooks->ftruncate != NULL) {
+    __glib_ioinstr_entered = true;
+    int ret = __glibc_ioinstr_hooks->ftruncate(fd, length);
+    __glib_ioinstr_entered = false;
+    return ret;
+  }
+
+  /* Standard implementation */
 # ifndef __NR_ftruncate
   return INLINE_SYSCALL_CALL (ftruncate64, fd,
 			      __ALIGNMENT_ARG SYSCALL_LL (length));
