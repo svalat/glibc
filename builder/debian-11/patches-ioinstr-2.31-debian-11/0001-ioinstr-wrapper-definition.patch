@@ -1,0 +1,289 @@
+From bec91c95bc0097bd11a64e785923674dcce1210f Mon Sep 17 00:00:00 2001
+From: Sebastien Valat <sebastien.valat.dev@orange.fr>
+Date: Sat, 26 Mar 2022 10:59:30 +0100
+Subject: [PATCH 1/3] ioinstr: wrapper definition
+
+---
+ Makeconfig                 |  4 ++--
+ include/ioinstr.h          | 29 +++++++++++++++++++++++++++++
+ io/Makefile                |  3 +++
+ io/Versions                |  3 +++
+ io/internal_ioinstr.c      |  1 +
+ ioinstr/Makefile           | 31 +++++++++++++++++++++++++++++++
+ ioinstr/Versions           |  5 +++++
+ ioinstr/internal_ioinstr.c | 13 +++++++++++++
+ ioinstr/ioinstr.h          | 31 +++++++++++++++++++++++++++++++
+ nptl/Makefile              |  3 +++
+ nptl/Versions              |  1 +
+ nptl/internal_ioinstr.c    |  1 +
+ rt/Makefile                |  2 ++
+ 13 files changed, 125 insertions(+), 2 deletions(-)
+ create mode 100644 include/ioinstr.h
+ create mode 120000 io/internal_ioinstr.c
+ create mode 100644 ioinstr/Makefile
+ create mode 100644 ioinstr/Versions
+ create mode 100644 ioinstr/internal_ioinstr.c
+ create mode 100644 ioinstr/ioinstr.h
+ create mode 120000 nptl/internal_ioinstr.c
+
+diff --git a/Makeconfig b/Makeconfig
+index f252842979..87f519fe46 100644
+--- a/Makeconfig
++++ b/Makeconfig
+@@ -981,7 +981,7 @@ endif
+ override CFLAGS	= -std=gnu11 -fgnu89-inline $(config-extra-cflags) \
+ 		  $(filter-out %frame-pointer,$(+cflags)) $(+gccwarn-c) \
+ 		  $(+extra-math-flags) \
+-		  $(sysdep-CFLAGS) $(CFLAGS-$(suffix $@)) $(CFLAGS-$(<F)) \
++		  $(sysdep-CFLAGS) $(intercept-CFLAGS) $(CFLAGS-$(suffix $@)) $(CFLAGS-$(<F)) \
+ 		  $(CFLAGS-$(@F)) $(tls-model) \
+ 		  $(foreach lib,$(libof-$(basename $(@F))) \
+ 				$(libof-$(<F)) $(libof-$(@F)),$(CFLAGS-$(lib)))
+@@ -1272,7 +1272,7 @@ all-subdirs = csu assert ctype locale intl catgets math setjmp signal	    \
+ 	      grp pwd posix io termios resource misc socket sysvipc gmon    \
+ 	      gnulib iconv iconvdata wctype manual shadow gshadow po argp   \
+ 	      localedata timezone rt conform debug mathvec support	    \
+-	      dlfcn elf
++	      dlfcn elf ioinstr
+ 
+ ifeq ($(build-crypt),yes)
+ all-subdirs += crypt
+diff --git a/include/ioinstr.h b/include/ioinstr.h
+new file mode 100644
+index 0000000000..f4c64d266a
+--- /dev/null
++++ b/include/ioinstr.h
+@@ -0,0 +1,29 @@
++#ifndef __GLIBC_IOINSTR_INTERNAL_H__
++#define __GLIBC_IOINSTR_INTERNAL_H__
++
++#ifndef __ASSEMBLER__
++
++typedef enum {
++	GLIBC_SYSCALL_NO_INTERCEPT = 0,
++	GLIBC_SYSCALL_INTERCEPTED = 1,
++} glibc_syscall_intercept_result_t;
++
++//structure containing the functions pointers to call
++typedef glibc_syscall_intercept_result_t (*glibc_syscall_intercepter_t)(unsigned long int * result, long syscall_number, long arg1, long arg2, long arg3, long arg4, long arg5, long arg6);
++
++extern void __glibc_syscall_intercepter_set(glibc_syscall_intercepter_t intercepter);
++libc_hidden_proto(__glibc_syscall_intercepter_set);
++
++#ifdef GLIBC_ENABLE_SYSCALL_INTERCEPT
++extern glibc_syscall_intercepter_t glibc_syscall_intercepter;
++#define GLIBC_SYSCALL_INTERCEPT(result, syscall_number, arg1, arg2, arg3, arg4, arg5, arg6) \
++	if (glibc_syscall_intercepter != NULL) \
++		intercep_result = glibc_syscall_intercepter((result), (syscall_number), (arg1), (arg2), (arg3), (arg4), (arg5), (arg6));
++#else
++#define GLIBC_SYSCALL_INTERCEPT(result, ...)
++#endif
++
++#endif
++
++#endif //__GLIBC_IOINSTR_INTERNAL_H__
++
+diff --git a/io/Makefile b/io/Makefile
+index d9a1da4566..cd33247c9d 100644
+--- a/io/Makefile
++++ b/io/Makefile
+@@ -20,6 +20,8 @@
+ #
+ subdir	:= io
+ 
++intercept-CFLAGS = -DGLIBC_ENABLE_SYSCALL_INTERCEPT
++
+ include ../Makeconfig
+ 
+ headers := sys/stat.h bits/stat.h sys/statfs.h bits/statfs.h sys/vfs.h \
+@@ -30,6 +32,7 @@ headers := sys/stat.h bits/stat.h sys/statfs.h bits/statfs.h sys/vfs.h \
+ 	   utime.h ftw.h fts.h sys/sendfile.h
+ 
+ routines :=								\
++	internal_ioinstr                                                \
+ 	utime								\
+ 	mkfifo mkfifoat							\
+ 	stat fstat lstat stat64 fstat64 lstat64 fstatat fstatat64	\
+diff --git a/io/Versions b/io/Versions
+index f7e5dbe49e..03f03e90ef 100644
+--- a/io/Versions
++++ b/io/Versions
+@@ -132,6 +132,9 @@ libc {
+     fcntl64;
+     statx;
+   }
++  GLIBC_2.31 {
++    glibc_syscall_intercepter_set;
++  }
+   GLIBC_PRIVATE {
+     __libc_fcntl64;
+     __fcntl_nocancel;
+diff --git a/io/internal_ioinstr.c b/io/internal_ioinstr.c
+new file mode 120000
+index 0000000000..41f7d8b33d
+--- /dev/null
++++ b/io/internal_ioinstr.c
+@@ -0,0 +1 @@
++../ioinstr/internal_ioinstr.c
+\ No newline at end of file
+diff --git a/ioinstr/Makefile b/ioinstr/Makefile
+new file mode 100644
+index 0000000000..a632d2ff46
+--- /dev/null
++++ b/ioinstr/Makefile
+@@ -0,0 +1,31 @@
++# Copyright (C) 1991-2021 Free Software Foundation, Inc.
++# This file is part of the GNU C Library.
++
++# The GNU C Library is free software; you can redistribute it and/or
++# modify it under the terms of the GNU Lesser General Public
++# License as published by the Free Software Foundation; either
++# version 2.1 of the License, or (at your option) any later version.
++
++# The GNU C Library is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++# Lesser General Public License for more details.
++
++# You should have received a copy of the GNU Lesser General Public
++# License along with the GNU C Library; if not, see
++# <https://www.gnu.org/licenses/>.
++
++#
++#	Sub-makefile for string portion of library.
++#
++subdir	:= string
++
++include ../Makeconfig
++
++headers		:= ioinstr.h
++#routines	:= internal_ioinstr
++routines	:=
++tests		:=
++#tests		:= tester
++
++include ../Rules
+diff --git a/ioinstr/Versions b/ioinstr/Versions
+new file mode 100644
+index 0000000000..d5e317d880
+--- /dev/null
++++ b/ioinstr/Versions
+@@ -0,0 +1,5 @@
++libc {
++  GLIBC_2.28 {
++    glibc_ioinstr_set; glibc_ioinstr_get;
++  }
++}
+diff --git a/ioinstr/internal_ioinstr.c b/ioinstr/internal_ioinstr.c
+new file mode 100644
+index 0000000000..b8f5d9bd24
+--- /dev/null
++++ b/ioinstr/internal_ioinstr.c
+@@ -0,0 +1,13 @@
++#include "ioinstr.h"
++#include <stdlib.h>
++
++glibc_syscall_intercepter_t glibc_syscall_intercepter = NULL;
++
++void __glibc_syscall_intercepter_set(glibc_syscall_intercepter_t intercepter)
++{
++	glibc_syscall_intercepter = intercepter;
++}
++
++libc_hidden_def (__glibc_syscall_intercepter_set)
++weak_alias(__glibc_syscall_intercepter_set, glibc_syscall_intercepter_set)
++//libc_hidden_weak (glibc_syscall_intercepter_set)
+diff --git a/ioinstr/ioinstr.h b/ioinstr/ioinstr.h
+new file mode 100644
+index 0000000000..b3179fbfbd
+--- /dev/null
++++ b/ioinstr/ioinstr.h
+@@ -0,0 +1,31 @@
++#ifndef __GLIBC_SYSCALL_INTERCEPTER_HEADER__
++#define __GLIBC_SYSCALL_INTERCEPTER_HEADER__
++
++//C++ handling
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++typedef enum {
++	GLIBC_SYSCALL_NO_INTERCEPT = 0,
++	GLIBC_SYSCALL_INTERCEPTED = 1,
++} glibc_syscall_intercept_result_t;
++
++//structure containing the functions pointers to call
++typedef glibc_syscall_intercept_result_t (*glibc_syscall_intercepter_t)(unsigned long int * result, long syscall_number, long arg1, long arg2, long arg3, long arg4, long arg5, long arg6);
++
++extern void glibc_syscall_intercepter_set(glibc_syscall_intercepter_t intercepter);
++
++#ifdef GLIBC_ENABLE_SYSCALL_INTERCEPT
++extern glibc_syscall_intercepter_t glibc_syscall_intercepter;
++#else
++#define glibc_syscall_intercepter(result, ...) GLIBC_SYSCALL_NO_INTERCEPT
++#endif
++
++//end of C++ handling
++#ifdef __cplusplus
++}
++#endif
++
++
++#endif //__GLIBC_HEADER__
+diff --git a/nptl/Makefile b/nptl/Makefile
+index 584e0ffd96..9ca9c9fd13 100644
+--- a/nptl/Makefile
++++ b/nptl/Makefile
+@@ -20,6 +20,8 @@
+ #
+ subdir	:= nptl
+ 
++intercept-CFLAGS = -DGLIBC_ENABLE_SYSCALL_INTERCEPT
++
+ include ../Makeconfig
+ 
+ headers := pthread.h semaphore.h bits/semaphore.h threads.h \
+@@ -42,6 +44,7 @@ static-only-routines = pthread_atfork
+ # We need to provide certain routines for compatibility with existing
+ # binaries.
+ pthread-compat-wrappers = \
++		      internal_ioinstr \
+ 		      write read close accept \
+ 		      connect recv recvfrom send \
+ 		      sendto fsync lseek lseek64 \
+diff --git a/nptl/Versions b/nptl/Versions
+index ff6fc06002..57b115eeb2 100644
+--- a/nptl/Versions
++++ b/nptl/Versions
+@@ -278,6 +278,7 @@ libpthread {
+ 
+   GLIBC_2.31 {
+     pthread_clockjoin_np;
++    glibc_syscall_intercepter_set;
+   }
+ 
+   GLIBC_PRIVATE {
+diff --git a/nptl/internal_ioinstr.c b/nptl/internal_ioinstr.c
+new file mode 120000
+index 0000000000..41f7d8b33d
+--- /dev/null
++++ b/nptl/internal_ioinstr.c
+@@ -0,0 +1 @@
++../ioinstr/internal_ioinstr.c
+\ No newline at end of file
+diff --git a/rt/Makefile b/rt/Makefile
+index 935d968716..ec6d9fac9d 100644
+--- a/rt/Makefile
++++ b/rt/Makefile
+@@ -20,6 +20,8 @@
+ #
+ subdir	:= rt
+ 
++CFLAGS += -DGLIBC_SKIP_SYSCALL_INTERCEPT
++
+ include ../Makeconfig
+ 
+ headers	:= aio.h mqueue.h bits/mqueue.h bits/mqueue2.h
+-- 
+2.30.2
+
