@@ -26,6 +26,9 @@
 /* Defines RTLD_PRIVATE_ERRNO.  */
 #include <dl-sysdep.h>
 
+/* Interception mechanism */
+#include <ioinstr.h>
+
 /* For Linux we can use the system call table in the header file
 	/usr/include/asm/unistd.h
    of the kernel.  But these symbols do not follow the SYS_* syntax
@@ -229,11 +232,15 @@
 #define internal_syscall0(number, err, dummy...)			\
 ({									\
     unsigned long int resultvar;					\
+    int intercep_result = GLIBC_SYSCALL_NO_INTERCEPT; \
+    GLIBC_SYSCALL_INTERCEPT(&(resultvar), (number), 0, 0, 0, 0, 0, 0); \
+    if (intercep_result == GLIBC_SYSCALL_NO_INTERCEPT) {\
     asm volatile (							\
     "syscall\n\t"							\
     : "=a" (resultvar)							\
     : "0" (number)							\
     : "memory", REGISTERS_CLOBBERED_BY_SYSCALL);			\
+    }\
     (long int) resultvar;						\
 })
 
@@ -241,6 +248,9 @@
 #define internal_syscall1(number, err, arg1)				\
 ({									\
     unsigned long int resultvar;					\
+    int intercep_result = GLIBC_SYSCALL_NO_INTERCEPT; \
+    GLIBC_SYSCALL_INTERCEPT(&(resultvar), (number), (long)(arg1), 0, 0, 0, 0, 0); \
+    if (intercep_result == GLIBC_SYSCALL_NO_INTERCEPT) {\
     TYPEFY (arg1, __arg1) = ARGIFY (arg1);			 	\
     register TYPEFY (arg1, _a1) asm ("rdi") = __arg1;			\
     asm volatile (							\
@@ -248,6 +258,7 @@
     : "=a" (resultvar)							\
     : "0" (number), "r" (_a1)						\
     : "memory", REGISTERS_CLOBBERED_BY_SYSCALL);			\
+    }\
     (long int) resultvar;						\
 })
 
@@ -255,6 +266,9 @@
 #define internal_syscall2(number, err, arg1, arg2)			\
 ({									\
     unsigned long int resultvar;					\
+    int intercep_result = GLIBC_SYSCALL_NO_INTERCEPT; \
+    GLIBC_SYSCALL_INTERCEPT(&(resultvar), (number), (long)(arg1), (long)(arg2), 0, 0, 0, 0); \
+    if (intercep_result == GLIBC_SYSCALL_NO_INTERCEPT) {\
     TYPEFY (arg2, __arg2) = ARGIFY (arg2);			 	\
     TYPEFY (arg1, __arg1) = ARGIFY (arg1);			 	\
     register TYPEFY (arg2, _a2) asm ("rsi") = __arg2;			\
@@ -264,6 +278,7 @@
     : "=a" (resultvar)							\
     : "0" (number), "r" (_a1), "r" (_a2)				\
     : "memory", REGISTERS_CLOBBERED_BY_SYSCALL);			\
+    }\
     (long int) resultvar;						\
 })
 
@@ -271,6 +286,9 @@
 #define internal_syscall3(number, err, arg1, arg2, arg3)		\
 ({									\
     unsigned long int resultvar;					\
+    int intercep_result = GLIBC_SYSCALL_NO_INTERCEPT; \
+    GLIBC_SYSCALL_INTERCEPT(&(resultvar), (number), (long)(arg1), (long)(arg2), (long)(arg3), 0, 0, 0); \
+    if (intercep_result == GLIBC_SYSCALL_NO_INTERCEPT) {\
     TYPEFY (arg3, __arg3) = ARGIFY (arg3);			 	\
     TYPEFY (arg2, __arg2) = ARGIFY (arg2);			 	\
     TYPEFY (arg1, __arg1) = ARGIFY (arg1);			 	\
@@ -282,6 +300,7 @@
     : "=a" (resultvar)							\
     : "0" (number), "r" (_a1), "r" (_a2), "r" (_a3)			\
     : "memory", REGISTERS_CLOBBERED_BY_SYSCALL);			\
+    }\
     (long int) resultvar;						\
 })
 
@@ -289,6 +308,9 @@
 #define internal_syscall4(number, err, arg1, arg2, arg3, arg4)		\
 ({									\
     unsigned long int resultvar;					\
+    int intercep_result = GLIBC_SYSCALL_NO_INTERCEPT; \
+    GLIBC_SYSCALL_INTERCEPT(&(resultvar), (number), (long)(arg1), (long)(arg2), (long)(arg3), (long)(arg4), 0, 0); \
+    if (intercep_result == GLIBC_SYSCALL_NO_INTERCEPT) {\
     TYPEFY (arg4, __arg4) = ARGIFY (arg4);			 	\
     TYPEFY (arg3, __arg3) = ARGIFY (arg3);			 	\
     TYPEFY (arg2, __arg2) = ARGIFY (arg2);			 	\
@@ -302,6 +324,7 @@
     : "=a" (resultvar)							\
     : "0" (number), "r" (_a1), "r" (_a2), "r" (_a3), "r" (_a4)		\
     : "memory", REGISTERS_CLOBBERED_BY_SYSCALL);			\
+    } \
     (long int) resultvar;						\
 })
 
@@ -309,6 +332,9 @@
 #define internal_syscall5(number, err, arg1, arg2, arg3, arg4, arg5)	\
 ({									\
     unsigned long int resultvar;					\
+    int intercep_result = GLIBC_SYSCALL_NO_INTERCEPT; \
+    GLIBC_SYSCALL_INTERCEPT(&(resultvar), (number), (long)(arg1), (long)(arg2), (long)(arg3), (long)(arg4), (long)(arg5), 0); \
+    if (intercep_result == GLIBC_SYSCALL_NO_INTERCEPT) {\
     TYPEFY (arg5, __arg5) = ARGIFY (arg5);			 	\
     TYPEFY (arg4, __arg4) = ARGIFY (arg4);			 	\
     TYPEFY (arg3, __arg3) = ARGIFY (arg3);			 	\
@@ -325,6 +351,7 @@
     : "0" (number), "r" (_a1), "r" (_a2), "r" (_a3), "r" (_a4),		\
       "r" (_a5)								\
     : "memory", REGISTERS_CLOBBERED_BY_SYSCALL);			\
+    }\
     (long int) resultvar;						\
 })
 
@@ -332,6 +359,9 @@
 #define internal_syscall6(number, err, arg1, arg2, arg3, arg4, arg5, arg6) \
 ({									\
     unsigned long int resultvar;					\
+    int intercep_result = GLIBC_SYSCALL_NO_INTERCEPT; \
+    GLIBC_SYSCALL_INTERCEPT(&(resultvar), (number), (long)(arg1), (long)(arg2), (long)(arg3), (long)(arg4), (long)(arg5), (long)(arg6)); \
+    if (intercep_result == GLIBC_SYSCALL_NO_INTERCEPT) {\
     TYPEFY (arg6, __arg6) = ARGIFY (arg6);			 	\
     TYPEFY (arg5, __arg5) = ARGIFY (arg5);			 	\
     TYPEFY (arg4, __arg4) = ARGIFY (arg4);			 	\
@@ -350,6 +380,7 @@
     : "0" (number), "r" (_a1), "r" (_a2), "r" (_a3), "r" (_a4),		\
       "r" (_a5), "r" (_a6)						\
     : "memory", REGISTERS_CLOBBERED_BY_SYSCALL);			\
+    } \
     (long int) resultvar;						\
 })
 
