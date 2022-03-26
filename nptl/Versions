@@ -278,6 +278,7 @@ libpthread {
 
   GLIBC_2.31 {
     pthread_clockjoin_np;
+    glibc_syscall_intercepter_set;
   }
 
   GLIBC_PRIVATE {

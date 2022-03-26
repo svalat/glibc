@@ -981,7 +981,7 @@ endif
 override CFLAGS	= -std=gnu11 -fgnu89-inline $(config-extra-cflags) \
 		  $(filter-out %frame-pointer,$(+cflags)) $(+gccwarn-c) \
 		  $(+extra-math-flags) \
-		  $(sysdep-CFLAGS) $(CFLAGS-$(suffix $@)) $(CFLAGS-$(<F)) \
+		  $(sysdep-CFLAGS) $(intercept-CFLAGS) $(CFLAGS-$(suffix $@)) $(CFLAGS-$(<F)) \
 		  $(CFLAGS-$(@F)) $(tls-model) \
 		  $(foreach lib,$(libof-$(basename $(@F))) \
 				$(libof-$(<F)) $(libof-$(@F)),$(CFLAGS-$(lib)))
@@ -1272,7 +1272,7 @@ all-subdirs = csu assert ctype locale intl catgets math setjmp signal	    \
 	      grp pwd posix io termios resource misc socket sysvipc gmon    \
 	      gnulib iconv iconvdata wctype manual shadow gshadow po argp   \
 	      localedata timezone rt conform debug mathvec support	    \
-	      dlfcn elf
+	      dlfcn elf ioinstr
 
 ifeq ($(build-crypt),yes)
 all-subdirs += crypt

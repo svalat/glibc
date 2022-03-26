@@ -20,6 +20,8 @@
 #
 subdir	:= nptl
 
+intercept-CFLAGS = -DGLIBC_ENABLE_SYSCALL_INTERCEPT
+
 include ../Makeconfig
 
 headers := pthread.h semaphore.h bits/semaphore.h threads.h \
@@ -42,6 +44,7 @@ static-only-routines = pthread_atfork
 # We need to provide certain routines for compatibility with existing
 # binaries.
 pthread-compat-wrappers = \
+		      internal_ioinstr \
 		      write read close accept \
 		      connect recv recvfrom send \
 		      sendto fsync lseek lseek64 \

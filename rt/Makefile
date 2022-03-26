@@ -20,6 +20,8 @@
 #
 subdir	:= rt
 
+CFLAGS += -DGLIBC_SKIP_SYSCALL_INTERCEPT
+
 include ../Makeconfig
 
 headers	:= aio.h mqueue.h bits/mqueue.h bits/mqueue2.h

@@ -20,6 +20,8 @@
 #
 subdir	:= io
 
+intercept-CFLAGS = -DGLIBC_ENABLE_SYSCALL_INTERCEPT
+
 include ../Makeconfig
 
 headers := sys/stat.h bits/stat.h sys/statfs.h bits/statfs.h sys/vfs.h \
@@ -30,6 +32,7 @@ headers := sys/stat.h bits/stat.h sys/statfs.h bits/statfs.h sys/vfs.h \
 	   utime.h ftw.h fts.h sys/sendfile.h
 
 routines :=								\
+	internal_ioinstr                                                \
 	utime								\
 	mkfifo mkfifoat							\
 	stat fstat lstat stat64 fstat64 lstat64 fstatat fstatat64	\

@@ -132,6 +132,9 @@ libc {
     fcntl64;
     statx;
   }
+  GLIBC_2.31 {
+    glibc_syscall_intercepter_set;
+  }
   GLIBC_PRIVATE {
     __libc_fcntl64;
     __fcntl_nocancel;
